@@ -16,6 +16,16 @@ const Tags = struct {
 
 const FFProbeOutput = struct {
     chapters: []Chapter,
+
+    fn release(self: FFProbeOutput, allocator: std.mem.Allocator) void {
+        for (self.chapters) |ch| {
+            allocator.free(ch.time_base);
+            allocator.free(ch.start_time);
+            allocator.free(ch.end_time);
+            allocator.free(ch.tags.title);
+        }
+        allocator.free(self.chapters);
+    }
 };
 
 pub fn readChapters(input_file: [*:0]const u8, allocator: std.mem.Allocator) !FFProbeOutput {
@@ -66,12 +76,6 @@ pub fn main() anyerror!void {
 
 test "parse chapters from example audio file" {
     const res = try readChapters("src/testdata/beep.m4a", std.testing.allocator);
-    for (res.chapters) |ch| {
-        std.testing.allocator.free(ch.time_base);
-        std.testing.allocator.free(ch.start_time);
-        std.testing.allocator.free(ch.end_time);
-        std.testing.allocator.free(ch.tags.title);
-    }
-    std.testing.allocator.free(res.chapters);
+    defer res.release(std.testing.allocator);
     try std.testing.expect(res.chapters.len == 3);
 }
