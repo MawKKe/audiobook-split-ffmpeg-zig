@@ -34,9 +34,6 @@ pub fn readChapters(input_file: [*:0]const u8, allocator: std.mem.Allocator) !FF
         .allocator = allocator,
         .argv = ffprobe_cmd,
     });
-    //var proc = std.ChildProcess.init(ffprobe_cmd, allocator);
-    //const term = try proc.wait();
-
     defer allocator.free(proc.stdout);
     defer allocator.free(proc.stderr);
 
@@ -47,15 +44,11 @@ pub fn readChapters(input_file: [*:0]const u8, allocator: std.mem.Allocator) !FF
         std.debug.print("ERROR (ffprobe): {s}\n", .{proc.stderr});
         return error.FFProbeCallError;
     }
-    //std.debug.print("out: {s}\n", .{proc.stdout});
 
-    return try std.json.parseFromSlice(FFProbeOutput, allocator, proc.stdout, .{
-        //.ignore_unknown_fields = true,
-    });
+    return try std.json.parseFromSlice(FFProbeOutput, allocator, proc.stdout, .{ });
 }
 
 pub fn main() anyerror!void {
-    //std.debug.print("usage: {s}\n", .{std.builtin.SourceLocation.fn_name});
     if (std.os.argv.len < 2) {
         std.debug.print("usage: {s} <path-to-file>\n", .{std.os.argv[0]});
         std.os.exit(1);
@@ -65,9 +58,7 @@ pub fn main() anyerror!void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const fnam = std.mem.sliceTo(std.os.argv[1], 0);
-
-    const parsed = try readChapters(fnam, allocator);
+    const parsed = try readChapters(std.os.argv[1], allocator);
 
     for (parsed.chapters) |ch| {
         std.debug.print("Ch id={}: ({} -> {}) '{s}'\n", .{ ch.id, ch.start, ch.end, ch.tags.title });
