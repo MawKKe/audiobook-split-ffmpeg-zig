@@ -19,16 +19,6 @@ const Tags = struct {
 
 const FFProbeOutput = struct {
     chapters: []Chapter,
-
-    fn _release(self: FFProbeOutput, allocator: std.mem.Allocator) void {
-        for (self.chapters) |ch| {
-            allocator.free(ch.time_base);
-            allocator.free(ch.start_time);
-            allocator.free(ch.end_time);
-            allocator.free(ch.tags.title);
-        }
-        allocator.free(self.chapters);
-    }
 };
 
 pub fn readChapters(input_file: [*:0]const u8, allocator: std.mem.Allocator) !std.json.Parsed(FFProbeOutput) {
