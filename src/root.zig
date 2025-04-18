@@ -41,10 +41,44 @@ pub fn readChapters(input_file: [*:0]const u8, allocator: std.mem.Allocator) !st
     return try std.json.parseFromSlice(FFProbeOutput, allocator, proc.stdout, .{});
 }
 
-test "parse chapters from example audio file" {
+test "parse chapters from example audio file containing 3 chapters" {
     const res = try readChapters("src/testdata/beep.m4a", std.testing.allocator);
     defer res.deinit();
-    try std.testing.expect(res.value.chapters.len == 3);
+
+    try std.testing.expectEqual(res.value.chapters.len, 3);
+
+    const first = res.value.chapters[0];
+    try std.testing.expectEqual(first.id, 0);
+    try std.testing.expectEqualStrings(first.time_base, "1/1000");
+    try std.testing.expectEqual(first.start, 0);
+    try std.testing.expectEqualStrings(first.start_time, "0.000000");
+    try std.testing.expectEqual(first.end, 20000);
+    try std.testing.expectEqualStrings(first.end_time, "20.000000");
+    try std.testing.expectEqualStrings(first.tags.title, "It All Started With a Simple BEEP");
+
+    const second = res.value.chapters[1];
+    try std.testing.expectEqual(second.id, 1);
+    try std.testing.expectEqualStrings(second.time_base, "1/1000");
+    try std.testing.expectEqual(second.start, 20000);
+    try std.testing.expectEqualStrings(second.start_time, "20.000000");
+    try std.testing.expectEqual(second.end, 40000);
+    try std.testing.expectEqualStrings(second.end_time, "40.000000");
+    try std.testing.expectEqualStrings(second.tags.title, "All You Can BEEP Buffee");
+
+    const third = res.value.chapters[2];
+    try std.testing.expectEqual(third.id, 2);
+    try std.testing.expectEqualStrings(third.time_base, "1/1000");
+    try std.testing.expectEqual(third.start, 40000);
+    try std.testing.expectEqualStrings(third.start_time, "40.000000");
+    try std.testing.expectEqual(third.end, 60000);
+    try std.testing.expectEqualStrings(third.end_time, "60.000000");
+    try std.testing.expectEqualStrings(third.tags.title, "The Final Beep");
+}
+
+test "parse chapters from example audio file containing no chapters" {
+    const res = try readChapters("src/testdata/beep-nochap.m4a", std.testing.allocator);
+    defer res.deinit();
+    try std.testing.expectEqual(res.value.chapters.len, 0);
 }
 
 test "fuzz example" {
