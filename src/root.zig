@@ -73,6 +73,71 @@ test "parse chapters from example audio file containing 3 chapters" {
     try std.testing.expectEqual(third.end, 60000);
     try std.testing.expectEqualStrings(third.end_time, "60.000000");
     try std.testing.expectEqualStrings(third.tags.title, "The Final Beep");
+
+    // NOTE: Problem with this field-by-field comparison is that if we add a field to the
+    // definition of the struct (here: Chapter), it is very likely we forget to augment our
+    // tests for that specific field => testing becomes leaky.
+}
+
+test "parse chapters from example audio file containing 3 chapters - alt solution" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const res = try readChapters("src/testdata/beep.m4a", alloc);
+
+    try std.testing.expectEqual(res.value.chapters.len, 3);
+
+    // NOTE: Doing testing using deep equality comparison with the whole struct + using inline
+    // struct initialization, the compiler is able to tell us if any of the field initializers are
+    // missing => test quality is enforced whenever struct definition is augmented.
+    //
+    // Although this inline initialization requires some extra hoops with dynamic fields like
+    // the []u8 string fields of Chapter and Tags. I guess we could've used @constCast to coerce
+    // the string literals to []u8, but that would feel...dirty.
+    //
+    // Fortunately we have ArenaAllocator etc., which makes memory management really simple :)
+    const expect = [3]Chapter{
+        .{
+            .id = 0,
+            .time_base = try alloc.dupe(u8, "1/1000"),
+            .start = 0,
+            .start_time = try alloc.dupe(u8, "0.000000"),
+            .end = 20000,
+            .end_time = try alloc.dupe(u8, "20.000000"),
+            .tags = Tags{
+                .title = try alloc.dupe(u8, "It All Started With a Simple BEEP"),
+            },
+        },
+        .{
+            .id = 1,
+            .time_base = try alloc.dupe(u8, "1/1000"),
+            .start = 20000,
+            .start_time = try alloc.dupe(u8, "20.000000"),
+            .end = 40000,
+            .end_time = try alloc.dupe(u8, "40.000000"),
+            .tags = Tags{
+                .title = try alloc.dupe(u8, "All You Can BEEP Buffee"),
+            },
+        },
+        .{
+            .id = 2,
+            .time_base = try alloc.dupe(u8, "1/1000"),
+            .start = 40000,
+            .start_time = try alloc.dupe(u8, "40.000000"),
+            .end = 60000,
+            .end_time = try alloc.dupe(u8, "60.000000"),
+            .tags = Tags{
+                .title = try alloc.dupe(u8, "The Final Beep"),
+            },
+        },
+    };
+
+    // NOTE: attempting to compare directly like this:
+    //   try std.testing.expectEqualDeep(res.value.chapters, expect);
+    //   => error: incompatible types: '[]root.Chapter' and '[3]root.Chapter'
+
+    try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
 }
 
 test "parse chapters from example audio file containing no chapters" {
