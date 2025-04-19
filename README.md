@@ -15,6 +15,14 @@ Try one of these feature-complete versions if you need to split an audiobook int
 
 ---
 
+TODO implement:
+- [x] read chapters from file into internal structured representation (`readChapters`)
+- [ ] extraction of single chapter via `ffmpeg` call using chapter information
+- [ ] parallelization of per-chapter extraction (user defined parallelism level)
+- [ ] command line interface (at least `--infile`, `--outdir`)
+- [ ] support for additional CLI options that tweak extraction details: how to name files, etc.
+      See the Python and Go versions for examples.
+
 ## Usage:
 
 Build main executable:
