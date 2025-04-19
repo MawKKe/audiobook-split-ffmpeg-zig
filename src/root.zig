@@ -21,6 +21,19 @@ const FFProbeOutput = struct {
     chapters: []Chapter,
 };
 
+const InputFileMetaData = struct {
+    path: []const u8,
+    stem: []const u8,
+    ext: []const u8,
+    _ffprobeOutput: std.json.Parsed(FFProbeOutput),
+
+    const Self = @This();
+
+    pub fn chapters(self: Self) []Chapter {
+        return self._ffprobeOutput.value.chapters;
+    }
+};
+
 fn numDigits(num: usize) usize {
     if (num == 0) {
         return 1;
@@ -37,6 +50,26 @@ test "numDigits" {
     try std.testing.expectEqual(2, numDigits(10));
     try std.testing.expectEqual(2, numDigits(99));
     try std.testing.expectEqual(3, numDigits(100));
+}
+
+pub fn readInputFileMetaData(alloc: std.mem.Allocator, path: []const u8) !InputFileMetaData {
+    return InputFileMetaData{
+        .path = path,
+        .stem = std.fs.path.stem(path),
+        .ext = std.fs.path.extension(path),
+        ._ffprobeOutput = try readChapters(alloc, path),
+    };
+}
+
+test "InputFileMetadata" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const meta = try readInputFileMetaData(alloc, "src/testdata/beep.m4a");
+    try std.testing.expectEqualStrings(meta.ext, ".m4a");
+    try std.testing.expectEqualStrings(meta.stem, "beep");
+    try std.testing.expectEqual(meta.chapters().len, 3);
 }
 
 pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
