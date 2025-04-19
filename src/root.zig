@@ -21,8 +21,8 @@ const FFProbeOutput = struct {
     chapters: []Chapter,
 };
 
-pub fn readChapters(input_file: [*:0]const u8, allocator: std.mem.Allocator) !std.json.Parsed(FFProbeOutput) {
-    const ffprobe_cmd = &.{ "ffprobe", "-i", std.mem.sliceTo(input_file, 0), "-v", "error", "-print_format", "json", "-show_chapters" };
+pub fn readChapters(input_file: []const u8, allocator: std.mem.Allocator) !std.json.Parsed(FFProbeOutput) {
+    const ffprobe_cmd = &.{ "ffprobe", "-i", input_file, "-v", "error", "-print_format", "json", "-show_chapters" };
     const proc = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = ffprobe_cmd,

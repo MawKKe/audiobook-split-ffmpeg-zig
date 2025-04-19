@@ -17,7 +17,9 @@ pub fn main() anyerror!void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const parsed = try lib.readChapters(std.os.argv[1], allocator);
+    const input_file = std.mem.sliceTo(std.os.argv[1], 0);
+
+    const parsed = try lib.readChapters(input_file, allocator);
     defer parsed.deinit();
 
     for (parsed.value.chapters) |ch| {
