@@ -32,6 +32,10 @@ const InputFileMetaData = struct {
     pub fn chapters(self: Self) []Chapter {
         return self._ffprobeOutput.value.chapters;
     }
+
+    pub fn deinit(self: Self) void {
+        self._ffprobeOutput.deinit();
+    }
 };
 
 const OutputOpts = struct {

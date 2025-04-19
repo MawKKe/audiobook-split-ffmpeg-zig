@@ -8,7 +8,7 @@ fmt:
 	zig fmt src/*.zig
 
 demo:
-	zig build run -- src/testdata/beep.m4a
+	zig build run -- -i src/testdata/beep.m4a -o zig-out/chapters
 
 clean:
 	rm -rf .zig-cache zig-out
