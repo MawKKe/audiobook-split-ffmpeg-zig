@@ -9,3 +9,6 @@ fmt:
 
 demo:
 	zig build run -- src/testdata/beep.m4a
+
+clean:
+	rm -rf .zig-cache zig-out
