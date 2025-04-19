@@ -87,18 +87,27 @@ test "InputFileMetadata" {
     try std.testing.expectEqual(meta.chapters().len, 3);
 }
 
-pub fn extractChapter(alloc: std.mem.Allocator, chapter_num: usize, meta: *const InputFileMetaData, opts: *const OutputOpts) ![]const u8 {
+pub fn extractChapter(
+    alloc: std.mem.Allocator,
+    chapter_num: usize,
+    meta: *const InputFileMetaData,
+    opts: *const OutputOpts,
+) ![]const u8 {
     const chapters = meta.chapters();
+
     if (chapter_num >= chapters.len) {
         return error.OutOfBounds;
     }
+
     const chap = &chapters[chapter_num];
+
     const name = try formatName(alloc, .{
         .num = chap.id,
         .num_width = numDigits(chapters.len),
         .title = chap.tags.title,
         .ext = meta.ext,
     });
+
     defer alloc.free(name);
 
     try std.fs.cwd().makePath(opts.output_dir);
