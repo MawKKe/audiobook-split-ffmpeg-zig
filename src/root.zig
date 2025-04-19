@@ -21,6 +21,24 @@ const FFProbeOutput = struct {
     chapters: []Chapter,
 };
 
+fn numDigits(num: usize) usize {
+    if (num == 0) {
+        return 1;
+    }
+    // ay carumba, SNR is quite poor
+    const fval = @as(f64, @floatFromInt(num));
+    const log = @floor(std.math.log10(fval));
+    return @as(usize, @intFromFloat(log + 1));
+}
+
+test "numDigits" {
+    try std.testing.expectEqual(1, numDigits(0));
+    try std.testing.expectEqual(1, numDigits(9));
+    try std.testing.expectEqual(2, numDigits(10));
+    try std.testing.expectEqual(2, numDigits(99));
+    try std.testing.expectEqual(3, numDigits(100));
+}
+
 pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
     const ffprobe_cmd = &.{ "ffprobe", "-i", input_file, "-v", "error", "-print_format", "json", "-show_chapters" };
     const proc = try std.process.Child.run(.{
