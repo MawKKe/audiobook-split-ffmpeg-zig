@@ -41,6 +41,38 @@ pub fn readChapters(input_file: []const u8, allocator: std.mem.Allocator) !std.j
     return try std.json.parseFromSlice(FFProbeOutput, allocator, proc.stdout, .{});
 }
 
+const NameFormatDetails = struct {
+    num: usize,
+    num_width: usize = 0,
+    title: []const u8,
+    ext: []const u8,
+};
+
+fn formatName(allocator: std.mem.Allocator, details: NameFormatDetails) ![]u8 {
+    const ext_clean = if (details.ext.len > 0 and details.ext[0] == '.') details.ext[1..] else details.ext;
+    const width = if (details.num_width < 1) 1 else details.num_width;
+    return try std.fmt.allocPrint(
+        allocator,
+        "{[number]d:0>[width]} - {[name]s}.{[ext]s}",
+        .{
+            .number = details.num,
+            .width = width,
+            .name = details.title,
+            .ext = ext_clean,
+        },
+    );
+}
+
+test "formatName simple" {
+    const alloc = std.testing.allocator;
+    const str = try formatName(
+        alloc,
+        .{ .num = 9, .num_width = 3, .title = "nimi on", .ext = ".m4a" },
+    );
+    defer alloc.free(str);
+    try std.testing.expectEqualStrings("009 - nimi on.m4a", str);
+}
+
 test "parse chapters from example audio file containing 3 chapters" {
     const res = try readChapters("src/testdata/beep.m4a", std.testing.allocator);
     defer res.deinit();
