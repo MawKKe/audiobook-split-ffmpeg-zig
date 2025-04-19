@@ -4,11 +4,11 @@
 const std = @import("std");
 
 const Chapter = struct {
-    id: i32,
+    id: usize,
     time_base: []u8,
-    start: i32,
+    start: usize,
     start_time: []u8,
-    end: i32,
+    end: usize,
     end_time: []u8,
     tags: Tags,
 };
@@ -31,6 +31,21 @@ const InputFileMetaData = struct {
 
     pub fn chapters(self: Self) []Chapter {
         return self._ffprobeOutput.value.chapters;
+    }
+};
+
+const OutputOpts = struct {
+    output_dir: []const u8,
+    no_pad_num: bool = false,
+
+    const Self = @This();
+
+    fn padding_width(self: Self, num_chapters: usize) usize {
+        if (self.no_pad_num) {
+            return 0;
+        } else {
+            return numDigits(num_chapters);
+        }
     }
 };
 
@@ -70,6 +85,86 @@ test "InputFileMetadata" {
     try std.testing.expectEqualStrings(meta.ext, ".m4a");
     try std.testing.expectEqualStrings(meta.stem, "beep");
     try std.testing.expectEqual(meta.chapters().len, 3);
+}
+
+pub fn extractChapter(alloc: std.mem.Allocator, chapter_num: usize, meta: *const InputFileMetaData, opts: *const OutputOpts) ![]const u8 {
+    const chapters = meta.chapters();
+    if (chapter_num >= chapters.len) {
+        return error.OutOfBounds;
+    }
+    const chap = &chapters[chapter_num];
+    const name = try formatName(alloc, .{
+        .num = chap.id,
+        .num_width = numDigits(chapters.len),
+        .title = chap.tags.title,
+        .ext = meta.ext,
+    });
+    defer alloc.free(name);
+
+    try std.fs.cwd().makePath(opts.output_dir);
+
+    const out = try std.fs.path.join(
+        alloc,
+        &[_][]const u8{ opts.output_dir, name },
+    );
+
+    const argv = [_][]const u8{
+        // zig fmt: off
+        "ffmpeg",
+        "-nostdin",
+        "-i", meta.path,
+        "-v", "error",
+        "-map_chapters", "-1",
+        "-vn",
+        "-c", "copy",
+        "-ss", chap.start_time,
+        "-to", chap.end_time,
+        "-n",
+        out,
+    };
+
+    const proc = try std.process.Child.run(.{
+        .allocator = alloc,
+        .argv = &argv,
+    });
+
+    defer alloc.free(proc.stdout);
+    defer alloc.free(proc.stderr);
+
+    if (proc.term.Exited != 0) {
+        if (proc.stderr[proc.stderr.len - 1] == '\n') {
+            proc.stderr[proc.stderr.len - 1] = 0;
+        }
+        std.debug.print("ERROR (ffprobe): {s}\n", .{proc.stderr});
+        return error.FFMpegCallError;
+    }
+
+    return out;
+}
+
+test "extractChapter" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    const meta = try readInputFileMetaData(alloc, "src/testdata/beep.m4a");
+    const tmp = std.testing.tmpDir(.{});
+    const tmp_dir = try tmp.dir.realpathAlloc(alloc, ".");
+    const opts = OutputOpts{ .output_dir = tmp_dir };
+
+    const out = try extractChapter(alloc, 0, &meta, &opts);
+
+    const fp = try tmp.dir.openFile(out, .{});
+
+    defer fp.close();
+
+    const stat = try fp.stat();
+
+    try std.testing.expect(stat.size > 500*1024);
+
+    const rel = try std.fs.path.relative(alloc, tmp_dir, out);
+
+    try std.testing.expectEqualStrings("0 - It All Started With a Simple BEEP.m4a", rel);
 }
 
 pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
