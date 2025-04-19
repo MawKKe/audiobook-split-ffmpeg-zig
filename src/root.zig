@@ -63,14 +63,34 @@ fn formatName(allocator: std.mem.Allocator, details: NameFormatDetails) ![]u8 {
     );
 }
 
-test "formatName simple" {
-    const alloc = std.testing.allocator;
-    const str = try formatName(
-        alloc,
-        .{ .num = 9, .num_width = 3, .title = "nimi on", .ext = ".m4a" },
+test "formatName with variable chapter number padding" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    try std.testing.expectEqualStrings(
+        "0 - nimi on .m4a",
+        try formatName(
+            alloc,
+            .{ .num = 0, .title = "nimi on ", .ext = "m4a" },
+        ),
     );
-    defer alloc.free(str);
-    try std.testing.expectEqualStrings("009 - nimi on.m4a", str);
+
+    try std.testing.expectEqualStrings(
+        "001 - nimi on.m4a",
+        try formatName(
+            alloc,
+            .{ .num = 1, .num_width = 3, .title = "nimi on", .ext = ".m4a" },
+        ),
+    );
+
+    try std.testing.expectEqualStrings(
+        "42 - nimi on.m4a",
+        try formatName(
+            alloc,
+            .{ .num = 42, .title = "nimi on", .ext = ".m4a" },
+        ),
+    );
 }
 
 test "parse chapters from example audio file containing 3 chapters" {
