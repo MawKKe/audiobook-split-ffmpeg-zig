@@ -19,7 +19,7 @@ pub fn main() anyerror!void {
 
     const input_file = std.mem.sliceTo(std.os.argv[1], 0);
 
-    const parsed = try lib.readChapters(input_file, allocator);
+    const parsed = try lib.readChapters(allocator, input_file);
     defer parsed.deinit();
 
     for (parsed.value.chapters) |ch| {

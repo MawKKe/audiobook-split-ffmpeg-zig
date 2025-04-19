@@ -21,7 +21,7 @@ const FFProbeOutput = struct {
     chapters: []Chapter,
 };
 
-pub fn readChapters(input_file: []const u8, allocator: std.mem.Allocator) !std.json.Parsed(FFProbeOutput) {
+pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
     const ffprobe_cmd = &.{ "ffprobe", "-i", input_file, "-v", "error", "-print_format", "json", "-show_chapters" };
     const proc = try std.process.Child.run(.{
         .allocator = allocator,
@@ -74,7 +74,7 @@ test "formatName simple" {
 }
 
 test "parse chapters from example audio file containing 3 chapters" {
-    const res = try readChapters("src/testdata/beep.m4a", std.testing.allocator);
+    const res = try readChapters(std.testing.allocator, "src/testdata/beep.m4a");
     defer res.deinit();
 
     try std.testing.expectEqual(res.value.chapters.len, 3);
@@ -116,7 +116,7 @@ test "parse chapters from example audio file containing 3 chapters - alt solutio
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const res = try readChapters("src/testdata/beep.m4a", alloc);
+    const res = try readChapters(alloc, "src/testdata/beep.m4a");
 
     try std.testing.expectEqual(res.value.chapters.len, 3);
 
@@ -173,7 +173,7 @@ test "parse chapters from example audio file containing 3 chapters - alt solutio
 }
 
 test "parse chapters from example audio file containing no chapters" {
-    const res = try readChapters("src/testdata/beep-nochap.m4a", std.testing.allocator);
+    const res = try readChapters(std.testing.allocator, "src/testdata/beep-nochap.m4a");
     defer res.deinit();
     try std.testing.expectEqual(res.value.chapters.len, 0);
 }
