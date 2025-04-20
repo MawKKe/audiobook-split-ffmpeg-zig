@@ -80,9 +80,7 @@ pub fn main() anyerror!void {
 
     defer std.process.argsFree(allocator, args);
 
-    const result = parseArgs(args);
-
-    if (result) |parsed| {
+    if (parseArgs(args)) |parsed| {
         std.debug.print(
             "Infile: {s}\nOutdir: {s}\n",
             .{
@@ -93,15 +91,21 @@ pub fn main() anyerror!void {
         const meta = try lib.readInputFileMetaData(allocator, parsed.infile);
         defer meta.deinit();
 
-        for (meta.chapters()) |ch| {
-            std.debug.print("Ch id={}: ({} -> {}) '{s}'\n", .{
+        const opts = lib.OutputOpts{
+            .output_dir = parsed.outdir,
+        };
+
+        for (0.., meta.chapters()) |i, ch| {
+            const retcode = try lib.extractChapter(allocator, i, &meta, &opts);
+            const result = if (retcode == 0) "SUCCESS" else "FAILURE";
+            std.debug.print("[{s}] Extract chapter id={} ({s} -> {s}) title='{s}'\n", .{
+                result,
                 ch.id,
-                ch.start,
-                ch.end,
+                ch.start_time,
+                ch.end_time,
                 ch.tags.title,
             });
         }
-        std.debug.print("WARNING: No files were actually produced (WIP)\n", .{});
     } else |err| switch (err) {
         error.ShowedHelp => std.process.exit(0), // don't treat as a failure
         error.NoArgs => std.process.exit(1),

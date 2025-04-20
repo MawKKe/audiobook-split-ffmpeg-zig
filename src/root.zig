@@ -38,7 +38,7 @@ const InputFileMetaData = struct {
     }
 };
 
-const OutputOpts = struct {
+pub const OutputOpts = struct {
     output_dir: []const u8,
     no_pad_num: bool = false,
 
@@ -96,7 +96,7 @@ pub fn extractChapter(
     chapter_num: usize,
     meta: *const InputFileMetaData,
     opts: *const OutputOpts,
-) ![]const u8 {
+) !u8 {
     const chapters = meta.chapters();
 
     if (chapter_num >= chapters.len) {
@@ -120,6 +120,7 @@ pub fn extractChapter(
         alloc,
         &[_][]const u8{ opts.output_dir, name },
     );
+    defer alloc.free(out);
 
     const argv = [_][]const u8{
         // zig fmt: off
@@ -152,9 +153,18 @@ pub fn extractChapter(
         return error.FFMpegCallError;
     }
 
-    return out;
+    return proc.term.Exited;
 }
 
+fn exists(path: []const u8) std.posix.AccessError!bool {
+    std.fs.cwd().access(path, .{}) catch |err| {
+        if (err == error.FileNotFound) {
+            return false;
+        }
+        return err;
+    };
+    return true;
+}
 test "extractChapter" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
@@ -165,19 +175,20 @@ test "extractChapter" {
     const tmp_dir = try tmp.dir.realpathAlloc(alloc, ".");
     const opts = OutputOpts{ .output_dir = tmp_dir };
 
-    const out = try extractChapter(alloc, 0, &meta, &opts);
+    const ret = try extractChapter(alloc, 0, &meta, &opts);
 
-    const fp = try tmp.dir.openFile(out, .{});
+    try std.testing.expectEqual(ret, 0);
 
-    defer fp.close();
+    const expect_name = "0 - It All Started With a Simple BEEP.m4a";
+
+    const expect_this_file_to_have_been_created =
+        try std.fs.path.join(alloc, &[_][]const u8{tmp_dir, expect_name});
+
+    const fp = try tmp.dir.openFile(expect_this_file_to_have_been_created, .{});
 
     const stat = try fp.stat();
 
     try std.testing.expect(stat.size > 500*1024);
-
-    const rel = try std.fs.path.relative(alloc, tmp_dir, out);
-
-    try std.testing.expectEqualStrings("0 - It All Started With a Simple BEEP.m4a", rel);
 }
 
 pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
