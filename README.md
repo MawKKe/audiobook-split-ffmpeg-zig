@@ -17,9 +17,9 @@ Try one of these feature-complete versions if you need to split an audiobook int
 
 TODO implement:
 - [x] read chapters from file into internal structured representation (`readChapters`)
-- [ ] extraction of single chapter via `ffmpeg` call using chapter information
+- [x] extraction of single chapter via `ffmpeg` call using chapter information
+- [x] command line interface (at least `--infile`, `--outdir`)
 - [ ] parallelization of per-chapter extraction (user defined parallelism level)
-- [ ] command line interface (at least `--infile`, `--outdir`)
 - [ ] support for additional CLI options that tweak extraction details: how to name files, etc.
       See the Python and Go versions for examples.
 
@@ -27,18 +27,32 @@ TODO implement:
 
 Build main executable:
 
-    $ make build
+    $ zig build  # or 'make build'
 
-the program is now in `./zig-out/bin/audiobook_split_ffmpeg_zig`
+the program is now in `./zig-out/bin/audiobook_split_ffmpeg_zig`.
 
-Run demo:
+Run help:
 
-    $ make demo
+    $ ./zig-out/bin/audiobook_split_ffmpeg_zig -h
+    Usage:
+      audiobook_split_ffmpeg_zig --input-file <path> --output-dir <path>
+
+    Options:
+      -i, --input-file  Path to input file (required)
+      -o, --output-dir  Path to output directory (required)
+      -h, --help        Show this help message
+
+Note: you can also run the main application using `--` separator with `zig build run`:
+
+    $ zig build run -- -h
 
 Run tests:
 
-    $ make test
+    $ zig build test  # or 'make test'
 
+Run demo extraction:
+
+    $ make demo
 
 ## License
 
