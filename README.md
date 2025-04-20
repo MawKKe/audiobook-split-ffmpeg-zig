@@ -23,19 +23,39 @@ TODO implement:
 - [ ] support for additional CLI options that tweak extraction details: how to name files, etc.
       See the Python and Go versions for examples.
 
-## Usage:
+
+## Setup
+
+Install dependencies:
+
+    $ sudo apt install ffmpeg    # or similar
 
 Build main executable:
 
-    $ zig build  # or 'make build'
+    $ zig build
 
-the program is now in `./zig-out/bin/audiobook_split_ffmpeg_zig`.
+or:
+
+    $ make build
+
+the program is now in `./zig-out/bin/audiobook-split-ffmpeg-zig`.
+
+Run tests:
+
+    $ zig build test
+
+or:
+
+    $ make test
+
+
+## Usage:
 
 Run help:
 
-    $ ./zig-out/bin/audiobook_split_ffmpeg_zig -h
+    $ ./zig-out/bin/audiobook-split-ffmpeg-zig -h
     Usage:
-      audiobook_split_ffmpeg_zig --input-file <path> --output-dir <path>
+      audiobook-split-ffmpeg-zig --input-file <path> --output-dir <path>
 
     Options:
       -i, --input-file  Path to input file (required)
@@ -46,13 +66,23 @@ Note: you can also run the main application using `--` separator with `zig build
 
     $ zig build run -- -h
 
-Run tests:
+Run extraction manually:
 
-    $ zig build test  # or 'make test'
+    $ ./zig-out/bin/audiobook-split-ffmpeg-zig \
+        --input-file src/testdata/beep.m4a \
+        --output-dir my-extracted
 
-Run demo extraction:
+Now you should have three files in `my-extracted/`:
+
+    $ ls my-extracted/
+    0 - It All Started With a Simple BEEP.m4a
+    1 - All You Can BEEP Buffee.m4a
+    2 - The Final Beep.m4a
+
+You can also run the predefined extraction demo:
 
     $ make demo
+
 
 ## License
 
