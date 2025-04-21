@@ -41,6 +41,7 @@ const InputFileMetaData = struct {
 pub const OutputOpts = struct {
     output_dir: []const u8,
     no_use_title: bool = false,
+    no_use_title_in_meta: bool = false,
 };
 
 fn numDigits(num: usize) usize {
@@ -114,6 +115,15 @@ pub fn extractChapter(
     );
     defer alloc.free(out);
 
+    const meta_title = try std.fmt.allocPrint(
+        alloc,
+        "title={s}",
+        .{
+            if (opts.no_use_title_in_meta or chap.tags.title.len == 0) "" else chap.tags.title,
+        },
+    );
+    defer alloc.free(meta_title);
+
     // zig fmt: off
     const argv = [_][]const u8{
         // BUG?
@@ -129,6 +139,7 @@ pub fn extractChapter(
         "-c", "copy",
         "-ss", chap.start_time,
         "-to", chap.end_time,
+        "-metadata", meta_title,
         "-n",
         out,
     };

@@ -11,6 +11,7 @@ const Args = struct {
     infile: []const u8,
     outdir: []const u8,
     no_use_title: bool = true,
+    no_use_title_in_meta: bool = false,
 };
 
 fn printHelp(program_name: []const u8) void {
@@ -27,7 +28,9 @@ fn printHelp(program_name: []const u8) void {
         \\  --no-use-title    Don't use chapter title as output filename stem (even
         \\                    if title is available). If title is not available, this
         \\                    option is implied.
-        \\
+        \\  --no-use-title-in-meta
+        \\                    Do not set chapter title in output metadata, even if the
+        \\                    title information is available.
     , .{program_name});
 }
 
@@ -35,6 +38,7 @@ fn parseArgs(argv: []const []const u8) !Args {
     var infile: ?[]const u8 = null;
     var outdir: ?[]const u8 = null;
     var no_use_title = false;
+    var no_use_title_in_meta = false;
 
     const prog_name = std.fs.path.basename(argv[0]);
 
@@ -61,6 +65,8 @@ fn parseArgs(argv: []const []const u8) !Args {
             outdir = argv[i];
         } else if (std.mem.eql(u8, arg, "--no-use-title")) {
             no_use_title = true;
+        } else if (std.mem.eql(u8, arg, "--no-use-title-in-meta")) {
+            no_use_title_in_meta = true;
         } else {
             std.debug.print("ERROR: Unknown argument: {s}\n---\n", .{arg});
             printHelp(prog_name);
@@ -77,6 +83,7 @@ fn parseArgs(argv: []const []const u8) !Args {
         .infile = infile.?,
         .outdir = outdir.?,
         .no_use_title = no_use_title,
+        .no_use_title_in_meta = no_use_title_in_meta,
     };
 }
 
@@ -112,6 +119,7 @@ pub fn main() anyerror!void {
         const opts = lib.OutputOpts{
             .output_dir = parsed.outdir,
             .no_use_title = parsed.no_use_title,
+            .no_use_title_in_meta = parsed.no_use_title_in_meta,
         };
 
         for (0.., meta.chapters()) |i, ch| {
