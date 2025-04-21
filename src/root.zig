@@ -10,11 +10,23 @@ const Chapter = struct {
     start_time: []u8,
     end: usize,
     end_time: []u8,
-    tags: Tags,
+    tags: ?Tags = null,
+
+    const Self = @This();
+
+    pub fn meta_title(self: Self) ?[]u8 {
+        if (self.tags == null or
+            self.tags.?.title == null or
+            self.tags.?.title.?.len == 0)
+        {
+            return null;
+        }
+        return self.tags.?.title;
+    }
 };
 
 const Tags = struct {
-    title: []u8,
+    title: ?[]u8 = null,
 };
 
 const FFProbeOutput = struct {
@@ -96,7 +108,10 @@ pub fn extractChapter(
 
     const chap = &chapters[chapter_num];
 
-    const stem = if (opts.no_use_title or chap.tags.title.len == 0) meta.stem else chap.tags.title;
+    const stem = if (!opts.no_use_title)
+        chap.meta_title() orelse meta.stem
+    else
+        meta.stem;
 
     const name = try formatName(alloc, .{
         .num = chap.id,
@@ -115,14 +130,19 @@ pub fn extractChapter(
     );
     defer alloc.free(out);
 
-    const meta_title = try std.fmt.allocPrint(
+    const meta_title = if (opts.no_use_title_in_meta)
+        ""
+    else
+        chap.meta_title() orelse "";
+
+    const meta_title_arg = try std.fmt.allocPrint(
         alloc,
         "title={s}",
         .{
-            if (opts.no_use_title_in_meta or chap.tags.title.len == 0) "" else chap.tags.title,
+            meta_title,
         },
     );
-    defer alloc.free(meta_title);
+    defer alloc.free(meta_title_arg);
 
     // zig fmt: off
     const argv = [_][]const u8{
@@ -139,7 +159,7 @@ pub fn extractChapter(
         "-c", "copy",
         "-ss", chap.start_time,
         "-to", chap.end_time,
-        "-metadata", meta_title,
+        "-metadata", meta_title_arg,
         "-y",
         out,
     };
@@ -245,6 +265,7 @@ test "parseFFProbeOutput" {
     const alloc = arena.allocator();
 
     {
+        // test case: 1 chapter, with title meta
         const input_json =
             \\ {
             \\    "chapters": [
@@ -282,7 +303,7 @@ test "parseFFProbeOutput" {
     }
 
     {
-        // CASE: 1 chapter, no title
+        // test case: 1 chapter, without title meta, and even without the "tags" field
         const input_json =
             \\ {
             \\    "chapters": [
@@ -292,10 +313,7 @@ test "parseFFProbeOutput" {
             \\            "start": 123,
             \\            "start_time": "0.123000",
             \\            "end": 19876,
-            \\            "end_time": "19.876000",
-            \\            "tags": {
-            \\                "title": "Title goes here"
-            \\            }
+            \\            "end_time": "19.876000"
             \\        }
             \\     ]
             \\ }
@@ -310,9 +328,7 @@ test "parseFFProbeOutput" {
                 .start_time = try alloc.dupe(u8, "0.123000"),
                 .end = 19876,
                 .end_time = try alloc.dupe(u8, "19.876000"),
-                .tags = Tags{
-                    .title = try alloc.dupe(u8, "Title goes here"),
-                },
+                .tags = null,
             },
         };
         try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
@@ -451,6 +467,7 @@ fn formatName(
         details.ext;
 
     const width = if (details.num_width < 1) 1 else details.num_width;
+
     return try std.fmt.allocPrint(
         allocator,
         "{[number]d:0>[width]} - {[name]s}.{[ext]s}",
@@ -506,7 +523,7 @@ test "parse chapters from example audio file containing 3 chapters" {
     try std.testing.expectEqualStrings(first.start_time, "0.000000");
     try std.testing.expectEqual(first.end, 20000);
     try std.testing.expectEqualStrings(first.end_time, "20.000000");
-    try std.testing.expectEqualStrings(first.tags.title, "It All Started With a Simple BEEP");
+    try std.testing.expectEqualStrings(first.tags.?.title.?, "It All Started With a Simple BEEP");
 
     const second = res.value.chapters[1];
     try std.testing.expectEqual(second.id, 1);
@@ -515,7 +532,7 @@ test "parse chapters from example audio file containing 3 chapters" {
     try std.testing.expectEqualStrings(second.start_time, "20.000000");
     try std.testing.expectEqual(second.end, 40000);
     try std.testing.expectEqualStrings(second.end_time, "40.000000");
-    try std.testing.expectEqualStrings(second.tags.title, "All You Can BEEP Buffee");
+    try std.testing.expectEqualStrings(second.tags.?.title.?, "All You Can BEEP Buffee");
 
     const third = res.value.chapters[2];
     try std.testing.expectEqual(third.id, 2);
@@ -524,7 +541,7 @@ test "parse chapters from example audio file containing 3 chapters" {
     try std.testing.expectEqualStrings(third.start_time, "40.000000");
     try std.testing.expectEqual(third.end, 60000);
     try std.testing.expectEqualStrings(third.end_time, "60.000000");
-    try std.testing.expectEqualStrings(third.tags.title, "The Final Beep");
+    try std.testing.expectEqualStrings(third.tags.?.title.?, "The Final Beep");
 
     // NOTE: Problem with this field-by-field comparison is that if we add a field to the
     // definition of the struct (here: Chapter), it is very likely we forget to augment our

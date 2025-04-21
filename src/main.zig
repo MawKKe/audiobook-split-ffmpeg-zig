@@ -130,7 +130,7 @@ pub fn main() anyerror!void {
                 ch.id,
                 ch.start_time,
                 ch.end_time,
-                ch.tags.title,
+                ch.meta_title() orelse "<no title>",
             });
         }
     } else |err| switch (err) {
