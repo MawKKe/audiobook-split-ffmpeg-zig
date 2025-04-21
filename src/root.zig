@@ -40,17 +40,7 @@ const InputFileMetaData = struct {
 
 pub const OutputOpts = struct {
     output_dir: []const u8,
-    no_pad_num: bool = false,
-
-    const Self = @This();
-
-    fn padding_width(self: Self, num_chapters: usize) usize {
-        if (self.no_pad_num) {
-            return 0;
-        } else {
-            return numDigits(num_chapters);
-        }
-    }
+    no_use_title: bool = false,
 };
 
 fn numDigits(num: usize) usize {
@@ -105,10 +95,12 @@ pub fn extractChapter(
 
     const chap = &chapters[chapter_num];
 
+    const stem = if (opts.no_use_title or chap.tags.title.len == 0) meta.stem else chap.tags.title;
+
     const name = try formatName(alloc, .{
         .num = chap.id,
         .num_width = numDigits(chapters.len),
-        .title = chap.tags.title,
+        .stem = stem,
         .ext = meta.ext,
     });
 
@@ -171,41 +163,57 @@ test "extractChapter" {
         "src/testdata/beep.m4a",
     );
 
-    var tmp = std.testing.tmpDir(.{});
-    defer tmp.cleanup();
+    const cases: [2]struct { no_use_title: bool, expect_name: []const u8 } = .{
+        .{
+            .no_use_title = false,
+            .expect_name = "0 - It All Started With a Simple BEEP.m4a",
+        },
+        .{
+            .no_use_title = true,
+            .expect_name = "0 - beep.m4a",
+        },
+    };
 
-    // Resolves the absolute path to the tmp directory. Why couldn't tmpDir do this already?
-    const tmp_dir = try tmp.dir.realpathAlloc(alloc, ".");
+    for (cases) |case| {
+        var tmp = std.testing.tmpDir(.{});
+        defer tmp.cleanup();
 
-    const opts = OutputOpts{ .output_dir = tmp_dir };
+        // Resolves the absolute path to the tmp directory. Why couldn't tmpDir do this already?
+        const tmp_dir = try tmp.dir.realpathAlloc(alloc, ".");
 
-    const ret = try extractChapter(
-        alloc,
-        0,
-        &meta,
-        &opts,
-    );
+        const opts = OutputOpts{
+            .output_dir = tmp_dir,
+            .no_use_title = case.no_use_title,
+        };
 
-    try std.testing.expectEqual(ret, 0);
-
-    const expect_name = "0 - It All Started With a Simple BEEP.m4a";
-
-    const expect_this_file_to_have_been_created =
-        try std.fs.path.join(
+        const ret = try extractChapter(
             alloc,
-            &[_][]const u8{ tmp_dir, expect_name },
+            0,
+            &meta,
+            &opts,
         );
 
-    const fp = try tmp.dir.openFile(
-        expect_this_file_to_have_been_created,
-        .{},
-    );
+        try std.testing.expectEqual(ret, 0);
 
-    defer fp.close();
+        const expect_name = case.expect_name;
 
-    const stat = try fp.stat();
+        const expect_this_file_to_have_been_created =
+            try std.fs.path.join(
+                alloc,
+                &[_][]const u8{ tmp_dir, expect_name },
+            );
 
-    try std.testing.expect(stat.size > 500 * 1024);
+        const fp = try tmp.dir.openFile(
+            expect_this_file_to_have_been_created,
+            .{},
+        );
+
+        defer fp.close();
+
+        const stat = try fp.stat();
+
+        try std.testing.expect(stat.size > 500 * 1024);
+    }
 }
 
 pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
@@ -243,7 +251,7 @@ fn formatName(
     details: struct {
         num: usize,
         num_width: usize = 0,
-        title: []const u8,
+        stem: []const u8,
         ext: []const u8,
     },
 ) ![]u8 {
@@ -259,7 +267,7 @@ fn formatName(
         .{
             .number = details.num,
             .width = width,
-            .name = details.title,
+            .name = details.stem,
             .ext = ext_clean,
         },
     );
@@ -274,7 +282,7 @@ test "formatName with variable chapter number padding" {
         "0 - nimi on .m4a",
         try formatName(
             alloc,
-            .{ .num = 0, .title = "nimi on ", .ext = "m4a" },
+            .{ .num = 0, .stem = "nimi on ", .ext = "m4a" },
         ),
     );
 
@@ -282,7 +290,7 @@ test "formatName with variable chapter number padding" {
         "001 - nimi on.m4a",
         try formatName(
             alloc,
-            .{ .num = 1, .num_width = 3, .title = "nimi on", .ext = ".m4a" },
+            .{ .num = 1, .num_width = 3, .stem = "nimi on", .ext = ".m4a" },
         ),
     );
 
@@ -290,7 +298,7 @@ test "formatName with variable chapter number padding" {
         "42 - nimi on.m4a",
         try formatName(
             alloc,
-            .{ .num = 42, .title = "nimi on", .ext = ".m4a" },
+            .{ .num = 42, .stem = "nimi on", .ext = ".m4a" },
         ),
     );
 }

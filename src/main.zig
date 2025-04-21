@@ -10,6 +10,7 @@ const lib = @import("audiobook_split_ffmpeg_zig_lib");
 const Args = struct {
     infile: []const u8,
     outdir: []const u8,
+    no_use_title: bool = true,
 };
 
 fn printHelp(program_name: []const u8) void {
@@ -17,10 +18,15 @@ fn printHelp(program_name: []const u8) void {
         \\Usage:
         \\  {0s} --input-file <path> --output-dir <path>
         \\
+        \\ Splits audio file into per-chapter files using ffmpeg and chapter metadata
+        \\
         \\Options:
         \\  -i, --input-file  Path to input file (required)
         \\  -o, --output-dir  Path to output directory (required)
         \\  -h, --help        Show this help message
+        \\  --no-use-title    Don't use chapter title as output filename stem (even
+        \\                    if title is available). If title is not available, this
+        \\                    option is implied.
         \\
     , .{program_name});
 }
@@ -28,6 +34,7 @@ fn printHelp(program_name: []const u8) void {
 fn parseArgs(argv: []const []const u8) !Args {
     var infile: ?[]const u8 = null;
     var outdir: ?[]const u8 = null;
+    var no_use_title = false;
 
     const prog_name = std.fs.path.basename(argv[0]);
 
@@ -52,6 +59,8 @@ fn parseArgs(argv: []const []const u8) !Args {
             i += 1;
             if (i >= argv.len) return error.MissingOutdirValue;
             outdir = argv[i];
+        } else if (std.mem.eql(u8, arg, "--no-use-title")) {
+            no_use_title = true;
         } else {
             std.debug.print("ERROR: Unknown argument: {s}\n---\n", .{arg});
             printHelp(prog_name);
@@ -67,6 +76,7 @@ fn parseArgs(argv: []const []const u8) !Args {
     return Args{
         .infile = infile.?,
         .outdir = outdir.?,
+        .no_use_title = no_use_title,
     };
 }
 
@@ -93,6 +103,7 @@ pub fn main() anyerror!void {
 
         const opts = lib.OutputOpts{
             .output_dir = parsed.outdir,
+            .no_use_title = parsed.no_use_title,
         };
 
         for (0.., meta.chapters()) |i, ch| {
