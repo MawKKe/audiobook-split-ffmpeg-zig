@@ -19,7 +19,7 @@ fn printHelp(program_name: []const u8) void {
         \\Usage:
         \\  {0s} --input-file <path> --output-dir <path>
         \\
-        \\ Splits audio file into per-chapter files using ffmpeg and chapter metadata
+        \\Splits audio file into per-chapter files using ffmpeg and chapter metadata
         \\
         \\Options:
         \\  -i, --input-file  Path to input file (required)
@@ -31,6 +31,7 @@ fn printHelp(program_name: []const u8) void {
         \\  --no-use-title-in-meta
         \\                    Do not set chapter title in output metadata, even if the
         \\                    title information is available.
+        \\
     , .{program_name});
 }
 
