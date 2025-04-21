@@ -53,14 +53,22 @@ or:
 
 Run help:
 
-    $ ./zig-out/bin/audiobook-split-ffmpeg-zig -h
+    $ ./zig-out/bin/audiobook-split-ffmpeg-zig -h
     Usage:
       audiobook-split-ffmpeg-zig --input-file <path> --output-dir <path>
+
+    Splits audio file into per-chapter files using ffmpeg and chapter metadata
 
     Options:
       -i, --input-file  Path to input file (required)
       -o, --output-dir  Path to output directory (required)
       -h, --help        Show this help message
+      --no-use-title    Don't use chapter title as output filename stem (even
+                        if title is available). If title is not available, this
+                        option is implied.
+      --no-use-title-in-meta
+                        Do not set chapter title in output metadata, even if the
+                        title information is available.
 
 Note: you can also run the main application using `--` separator with `zig build run`:
 
