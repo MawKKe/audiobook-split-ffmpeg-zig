@@ -101,6 +101,14 @@ pub fn main() anyerror!void {
         const meta = try lib.readInputFileMetaData(allocator, parsed.infile);
         defer meta.deinit();
 
+        if (meta.chapters().len == 0) {
+            std.debug.print(
+                "ERROR: Input file contains no chapter metadata - unable to proceed. Exiting...\n",
+                .{},
+            );
+            std.process.exit(3);
+        }
+
         const opts = lib.OutputOpts{
             .output_dir = parsed.outdir,
             .no_use_title = parsed.no_use_title,
