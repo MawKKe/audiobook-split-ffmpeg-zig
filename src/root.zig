@@ -122,8 +122,12 @@ pub fn extractChapter(
     );
     defer alloc.free(out);
 
+    // zig fmt: off
     const argv = [_][]const u8{
-        // zig fmt: off
+        // BUG?
+        // If I place pragmas 'zig fmt: off' on this line and 'zig fmt: on' after the last element
+        // => formatting remains disabled. The pragmas need to be placed around the whole statement
+        // for it to work as expected.
         "ffmpeg",
         "-nostdin",
         "-i", meta.path,
@@ -136,6 +140,7 @@ pub fn extractChapter(
         "-n",
         out,
     };
+    // zig fmt: on
 
     const proc = try std.process.Child.run(.{
         .allocator = alloc,
@@ -156,47 +161,69 @@ pub fn extractChapter(
     return proc.term.Exited;
 }
 
-fn exists(path: []const u8) std.posix.AccessError!bool {
-    std.fs.cwd().access(path, .{}) catch |err| {
-        if (err == error.FileNotFound) {
-            return false;
-        }
-        return err;
-    };
-    return true;
-}
 test "extractChapter" {
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const meta = try readInputFileMetaData(alloc, "src/testdata/beep.m4a");
-    const tmp = std.testing.tmpDir(.{});
+    const meta = try readInputFileMetaData(
+        alloc,
+        "src/testdata/beep.m4a",
+    );
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    // Resolves the absolute path to the tmp directory. Why couldn't tmpDir do this already?
     const tmp_dir = try tmp.dir.realpathAlloc(alloc, ".");
+
     const opts = OutputOpts{ .output_dir = tmp_dir };
 
-    const ret = try extractChapter(alloc, 0, &meta, &opts);
+    const ret = try extractChapter(
+        alloc,
+        0,
+        &meta,
+        &opts,
+    );
 
     try std.testing.expectEqual(ret, 0);
 
     const expect_name = "0 - It All Started With a Simple BEEP.m4a";
 
     const expect_this_file_to_have_been_created =
-        try std.fs.path.join(alloc, &[_][]const u8{tmp_dir, expect_name});
+        try std.fs.path.join(
+            alloc,
+            &[_][]const u8{ tmp_dir, expect_name },
+        );
 
-    const fp = try tmp.dir.openFile(expect_this_file_to_have_been_created, .{});
+    const fp = try tmp.dir.openFile(
+        expect_this_file_to_have_been_created,
+        .{},
+    );
+
+    defer fp.close();
 
     const stat = try fp.stat();
 
-    try std.testing.expect(stat.size > 500*1024);
+    try std.testing.expect(stat.size > 500 * 1024);
 }
 
 pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
-    const ffprobe_cmd = &.{ "ffprobe", "-i", input_file, "-v", "error", "-print_format", "json", "-show_chapters" };
+    // zig fmt: off
+    const ffprobe_cmd = &.{
+        "ffprobe",
+        "-i", input_file,
+        "-v", "error",
+        "-print_format", "json",
+        "-show_chapters",
+    };
+    // zig fmt: on
+
     const proc = try std.process.Child.run(.{
         .allocator = allocator,
         .argv = ffprobe_cmd,
     });
+
     defer allocator.free(proc.stdout);
     defer allocator.free(proc.stderr);
 
@@ -211,15 +238,20 @@ pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.j
     return try std.json.parseFromSlice(FFProbeOutput, allocator, proc.stdout, .{});
 }
 
-const NameFormatDetails = struct {
-    num: usize,
-    num_width: usize = 0,
-    title: []const u8,
-    ext: []const u8,
-};
+fn formatName(
+    allocator: std.mem.Allocator,
+    details: struct {
+        num: usize,
+        num_width: usize = 0,
+        title: []const u8,
+        ext: []const u8,
+    },
+) ![]u8 {
+    const ext_clean = if (details.ext.len > 0 and details.ext[0] == '.')
+        details.ext[1..]
+    else
+        details.ext;
 
-fn formatName(allocator: std.mem.Allocator, details: NameFormatDetails) ![]u8 {
-    const ext_clean = if (details.ext.len > 0 and details.ext[0] == '.') details.ext[1..] else details.ext;
     const width = if (details.num_width < 1) 1 else details.num_width;
     return try std.fmt.allocPrint(
         allocator,
