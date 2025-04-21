@@ -140,7 +140,7 @@ pub fn extractChapter(
         "-ss", chap.start_time,
         "-to", chap.end_time,
         "-metadata", meta_title,
-        "-n",
+        "-y",
         out,
     };
     // zig fmt: on
