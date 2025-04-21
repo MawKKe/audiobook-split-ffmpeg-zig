@@ -216,7 +216,181 @@ test "extractChapter" {
     }
 }
 
-pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
+fn parseFFProbeOutput(
+    allocator: std.mem.Allocator,
+    json_content: []const u8,
+) !std.json.Parsed(FFProbeOutput) {
+    return try std.json.parseFromSlice(
+        FFProbeOutput,
+        allocator,
+        json_content,
+        .{},
+    );
+}
+
+test "parseFFProbeOutput" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    {
+        const input_json =
+            \\ {
+            \\    "chapters": [
+            \\        {
+            \\            "id": 999,
+            \\            "time_base": "1/1000",
+            \\            "start": 123,
+            \\            "start_time": "0.123000",
+            \\            "end": 19876,
+            \\            "end_time": "19.876000",
+            \\            "tags": {
+            \\                "title": "Title goes here"
+            \\            }
+            \\        }
+            \\    ]
+            \\ }
+            \\
+        ;
+        const res = try parseFFProbeOutput(alloc, input_json);
+
+        const expect = [1]Chapter{
+            .{
+                .id = 999,
+                .time_base = try alloc.dupe(u8, "1/1000"),
+                .start = 123,
+                .start_time = try alloc.dupe(u8, "0.123000"),
+                .end = 19876,
+                .end_time = try alloc.dupe(u8, "19.876000"),
+                .tags = Tags{
+                    .title = try alloc.dupe(u8, "Title goes here"),
+                },
+            },
+        };
+        try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+    }
+
+    {
+        // CASE: 1 chapter, no title
+        const input_json =
+            \\ {
+            \\    "chapters": [
+            \\        {
+            \\            "id": 999,
+            \\            "time_base": "1/1000",
+            \\            "start": 123,
+            \\            "start_time": "0.123000",
+            \\            "end": 19876,
+            \\            "end_time": "19.876000",
+            \\            "tags": {
+            \\                "title": "Title goes here"
+            \\            }
+            \\        }
+            \\     ]
+            \\ }
+        ;
+        const res = try parseFFProbeOutput(alloc, input_json);
+
+        const expect = [1]Chapter{
+            .{
+                .id = 999,
+                .time_base = try alloc.dupe(u8, "1/1000"),
+                .start = 123,
+                .start_time = try alloc.dupe(u8, "0.123000"),
+                .end = 19876,
+                .end_time = try alloc.dupe(u8, "19.876000"),
+                .tags = Tags{
+                    .title = try alloc.dupe(u8, "Title goes here"),
+                },
+            },
+        };
+        try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+    }
+    {
+        const three_chapters_with_titles =
+            \\ {
+            \\    "chapters": [
+            \\        {
+            \\            "id": 0,
+            \\            "time_base": "1/1000",
+            \\            "start": 0,
+            \\            "start_time": "0.000000",
+            \\            "end": 20000,
+            \\            "end_time": "20.000000",
+            \\            "tags": {
+            \\                "title": "It All Started With a Simple BEEP"
+            \\            }
+            \\        },
+            \\        {
+            \\            "id": 1,
+            \\            "time_base": "1/1000",
+            \\            "start": 20000,
+            \\            "start_time": "20.000000",
+            \\            "end": 40000,
+            \\            "end_time": "40.000000",
+            \\            "tags": {
+            \\                "title": "All You Can BEEP Buffee"
+            \\            }
+            \\        },
+            \\        {
+            \\            "id": 2,
+            \\            "time_base": "1/1000",
+            \\            "start": 40000,
+            \\            "start_time": "40.000000",
+            \\            "end": 60000,
+            \\            "end_time": "60.000000",
+            \\            "tags": {
+            \\                "title": "The Final Beep"
+            \\            }
+            \\        }
+            \\    ]
+            \\ }
+            \\
+        ;
+        const res = try parseFFProbeOutput(alloc, three_chapters_with_titles);
+        try std.testing.expectEqual(3, res.value.chapters.len);
+
+        const expect = [3]Chapter{
+            .{
+                .id = 0,
+                .time_base = try alloc.dupe(u8, "1/1000"),
+                .start = 0,
+                .start_time = try alloc.dupe(u8, "0.000000"),
+                .end = 20000,
+                .end_time = try alloc.dupe(u8, "20.000000"),
+                .tags = Tags{
+                    .title = try alloc.dupe(u8, "It All Started With a Simple BEEP"),
+                },
+            },
+            .{
+                .id = 1,
+                .time_base = try alloc.dupe(u8, "1/1000"),
+                .start = 20000,
+                .start_time = try alloc.dupe(u8, "20.000000"),
+                .end = 40000,
+                .end_time = try alloc.dupe(u8, "40.000000"),
+                .tags = Tags{
+                    .title = try alloc.dupe(u8, "All You Can BEEP Buffee"),
+                },
+            },
+            .{
+                .id = 2,
+                .time_base = try alloc.dupe(u8, "1/1000"),
+                .start = 40000,
+                .start_time = try alloc.dupe(u8, "40.000000"),
+                .end = 60000,
+                .end_time = try alloc.dupe(u8, "60.000000"),
+                .tags = Tags{
+                    .title = try alloc.dupe(u8, "The Final Beep"),
+                },
+            },
+        };
+
+        try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+    }
+}
+
+fn ffProbe(allocator: std.mem.Allocator, input_file: []const u8) ![]u8 {
     // zig fmt: off
     const ffprobe_cmd = &.{
         "ffprobe",
@@ -232,7 +406,6 @@ pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.j
         .argv = ffprobe_cmd,
     });
 
-    defer allocator.free(proc.stdout);
     defer allocator.free(proc.stderr);
 
     if (proc.term.Exited != 0) {
@@ -243,7 +416,13 @@ pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.j
         return error.FFProbeCallError;
     }
 
-    return try std.json.parseFromSlice(FFProbeOutput, allocator, proc.stdout, .{});
+    return proc.stdout;
+}
+
+pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
+    const json_data = try ffProbe(allocator, input_file);
+    defer allocator.free(json_data);
+    return try parseFFProbeOutput(allocator, json_data);
 }
 
 fn formatName(
