@@ -58,11 +58,11 @@ fn parseArgs(argv: []const []const u8) !Args {
             return error.ShowedHelp;
         } else if (std.mem.eql(u8, arg, "--input-file") or std.mem.eql(u8, arg, "-i")) {
             i += 1;
-            if (i >= argv.len) return error.MissingInfileValue;
+            if (i >= argv.len) return error.MissingInputFileValue;
             infile = argv[i];
         } else if (std.mem.eql(u8, arg, "--output-dir") or std.mem.eql(u8, arg, "-o")) {
             i += 1;
-            if (i >= argv.len) return error.MissingOutdirValue;
+            if (i >= argv.len) return error.MissingOutputDirValue;
             outdir = argv[i];
         } else if (std.mem.eql(u8, arg, "--no-use-title")) {
             no_use_title = true;
@@ -77,8 +77,8 @@ fn parseArgs(argv: []const []const u8) !Args {
         i += 1;
     }
 
-    if (infile == null) return error.MissingInfile;
-    if (outdir == null) return error.MissingOutdir;
+    if (infile == null) return error.MissingInputFile;
+    if (outdir == null) return error.MissingOutputDir;
 
     return Args{
         .infile = infile.?,
@@ -102,7 +102,10 @@ pub fn main() anyerror!void {
         switch (err) {
             error.ShowedHelp => std.process.exit(0), // don't treat as a failure
             error.NoArgs => std.process.exit(1),
-            else => std.process.exit(2),
+            else => {
+                std.debug.print("ERROR: failed to parse arguments, reason: {}\n", .{err});
+                std.process.exit(2);
+            },
         };
 
     std.debug.print(
