@@ -94,49 +94,53 @@ pub fn main() anyerror!void {
 
     const allocator = gpa.allocator();
 
-    const args = try std.process.argsAlloc(allocator);
+    const argv = try std.process.argsAlloc(allocator);
 
-    defer std.process.argsFree(allocator, args);
+    defer std.process.argsFree(allocator, argv);
 
-    if (parseArgs(args)) |parsed| {
-        std.debug.print(
-            "Infile: {s}\nOutdir: {s}\n",
-            .{
-                parsed.infile,
-                parsed.outdir,
-            },
-        );
-        const meta = try lib.readInputFileMetaData(allocator, parsed.infile);
-        defer meta.deinit();
-
-        if (meta.chapters().len == 0) {
-            std.debug.print(
-                "ERROR: Input file contains no chapter metadata - unable to proceed. Exiting...\n",
-                .{},
-            );
-            std.process.exit(3);
-        }
-
-        const opts = lib.OutputOpts{
-            .output_dir = parsed.outdir,
-            .no_use_title = parsed.no_use_title,
-            .no_use_title_in_meta = parsed.no_use_title_in_meta,
+    const args = parseArgs(argv) catch |err|
+        switch (err) {
+            error.ShowedHelp => std.process.exit(0), // don't treat as a failure
+            error.NoArgs => std.process.exit(1),
+            else => std.process.exit(2),
         };
 
-        for (0.., meta.chapters()) |i, ch| {
-            const retcode = try lib.extractChapter(allocator, i, &meta, &opts);
-            const result = if (retcode == 0) "SUCCESS" else "FAILURE";
-            std.debug.print("[{s}] Extract chapter id={} ({s} -> {s}) title='{s}'\n", .{
-                result,
-                ch.id,
-                ch.start_time,
-                ch.end_time,
-                ch.meta_title() orelse "<no title>",
-            });
-        }
-    } else |err| switch (err) {
-        error.ShowedHelp => std.process.exit(0), // don't treat as a failure
-        error.NoArgs => std.process.exit(1),
-        else => std.process.exit(2),
+    std.debug.print(
+        "Infile: {s}\nOutdir: {s}\n",
+        .{
+            args.infile,
+            args.outdir,
+        },
+    );
+    const meta = try lib.readInputFileMetaData(
+        allocator,
+        args.infile,
+    );
+    defer meta.deinit();
+
+    if (meta.chapters().len == 0) {
+        std.debug.print(
+            "ERROR: Input file contains no chapter metadata - unable to proceed. Exiting...\n",
+            .{},
+        );
+        std.process.exit(3);
+    }
+
+    const opts = lib.OutputOpts{
+        .output_dir = args.outdir,
+        .no_use_title = args.no_use_title,
+        .no_use_title_in_meta = args.no_use_title_in_meta,
+    };
+
+    for (0.., meta.chapters()) |i, ch| {
+        const retcode = try lib.extractChapter(allocator, i, &meta, &opts);
+        const result = if (retcode == 0) "SUCCESS" else "FAILURE";
+        std.debug.print("[{s}] Extract chapter id={} ({s} -> {s}) title='{s}'\n", .{
+            result,
+            ch.id,
+            ch.start_time,
+            ch.end_time,
+            ch.meta_title() orelse "<no title>",
+        });
     }
 }
