@@ -89,10 +89,10 @@ fn parseArgs(argv: []const []const u8) !Args {
 }
 
 pub fn main() anyerror!void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(gpa.deinit() == .ok);
 
-    const allocator = arena.allocator();
+    const allocator = gpa.allocator();
 
     const args = try std.process.argsAlloc(allocator);
 
