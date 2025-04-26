@@ -89,9 +89,9 @@ test "InputFileMetadata" {
     const alloc = arena.allocator();
 
     const meta = try readInputFileMetaData(alloc, "src/testdata/beep.m4a");
-    try std.testing.expectEqualStrings(meta.ext, ".m4a");
-    try std.testing.expectEqualStrings(meta.stem, "beep");
-    try std.testing.expectEqual(meta.chapters().len, 3);
+    try std.testing.expectEqualStrings(".m4a", meta.ext);
+    try std.testing.expectEqualStrings("beep", meta.stem);
+    try std.testing.expectEqual(3, meta.chapters().len);
 }
 
 pub fn extractChapter(
@@ -224,7 +224,7 @@ test "extractChapter" {
             &opts,
         );
 
-        try std.testing.expectEqual(ret, 0);
+        try std.testing.expectEqual(0, ret);
 
         const expect_name = case.expect_name;
 
@@ -299,7 +299,7 @@ test "parseFFProbeOutput" {
                 },
             },
         };
-        try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+        try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
     }
 
     {
@@ -331,7 +331,7 @@ test "parseFFProbeOutput" {
                 .tags = null,
             },
         };
-        try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+        try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
     }
     {
         const three_chapters_with_titles =
@@ -413,7 +413,7 @@ test "parseFFProbeOutput" {
             },
         };
 
-        try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+        try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
     }
 }
 
@@ -514,34 +514,34 @@ test "parse chapters from example audio file containing 3 chapters" {
     const res = try readChapters(std.testing.allocator, "src/testdata/beep.m4a");
     defer res.deinit();
 
-    try std.testing.expectEqual(res.value.chapters.len, 3);
+    try std.testing.expectEqual(3, res.value.chapters.len);
 
     const first = res.value.chapters[0];
-    try std.testing.expectEqual(first.id, 0);
-    try std.testing.expectEqualStrings(first.time_base, "1/1000");
-    try std.testing.expectEqual(first.start, 0);
-    try std.testing.expectEqualStrings(first.start_time, "0.000000");
-    try std.testing.expectEqual(first.end, 20000);
-    try std.testing.expectEqualStrings(first.end_time, "20.000000");
-    try std.testing.expectEqualStrings(first.tags.?.title.?, "It All Started With a Simple BEEP");
+    try std.testing.expectEqual(0, first.id);
+    try std.testing.expectEqualStrings("1/1000", first.time_base);
+    try std.testing.expectEqual(0, first.start);
+    try std.testing.expectEqualStrings("0.000000", first.start_time);
+    try std.testing.expectEqual(20000, first.end);
+    try std.testing.expectEqualStrings("20.000000", first.end_time);
+    try std.testing.expectEqualStrings("It All Started With a Simple BEEP", first.tags.?.title.?);
 
     const second = res.value.chapters[1];
-    try std.testing.expectEqual(second.id, 1);
-    try std.testing.expectEqualStrings(second.time_base, "1/1000");
-    try std.testing.expectEqual(second.start, 20000);
-    try std.testing.expectEqualStrings(second.start_time, "20.000000");
-    try std.testing.expectEqual(second.end, 40000);
-    try std.testing.expectEqualStrings(second.end_time, "40.000000");
-    try std.testing.expectEqualStrings(second.tags.?.title.?, "All You Can BEEP Buffee");
+    try std.testing.expectEqual(1, second.id);
+    try std.testing.expectEqualStrings("1/1000", second.time_base);
+    try std.testing.expectEqual(20000, second.start);
+    try std.testing.expectEqualStrings("20.000000", second.start_time);
+    try std.testing.expectEqual(40000, second.end);
+    try std.testing.expectEqualStrings("40.000000", second.end_time);
+    try std.testing.expectEqualStrings("All You Can BEEP Buffee", second.tags.?.title.?);
 
     const third = res.value.chapters[2];
-    try std.testing.expectEqual(third.id, 2);
-    try std.testing.expectEqualStrings(third.time_base, "1/1000");
-    try std.testing.expectEqual(third.start, 40000);
-    try std.testing.expectEqualStrings(third.start_time, "40.000000");
-    try std.testing.expectEqual(third.end, 60000);
-    try std.testing.expectEqualStrings(third.end_time, "60.000000");
-    try std.testing.expectEqualStrings(third.tags.?.title.?, "The Final Beep");
+    try std.testing.expectEqual(2, third.id);
+    try std.testing.expectEqualStrings("1/1000", third.time_base);
+    try std.testing.expectEqual(40000, third.start);
+    try std.testing.expectEqualStrings("40.000000", third.start_time);
+    try std.testing.expectEqual(60000, third.end);
+    try std.testing.expectEqualStrings("60.000000", third.end_time);
+    try std.testing.expectEqualStrings("The Final Beep", third.tags.?.title.?);
 
     // NOTE: Problem with this field-by-field comparison is that if we add a field to the
     // definition of the struct (here: Chapter), it is very likely we forget to augment our
@@ -555,7 +555,7 @@ test "parse chapters from example audio file containing 3 chapters - alt solutio
 
     const res = try readChapters(alloc, "src/testdata/beep.m4a");
 
-    try std.testing.expectEqual(res.value.chapters.len, 3);
+    try std.testing.expectEqual(3, res.value.chapters.len);
 
     // NOTE: Doing testing using deep equality comparison with the whole struct + using inline
     // struct initialization, the compiler is able to tell us if any of the field initializers are
@@ -603,16 +603,16 @@ test "parse chapters from example audio file containing 3 chapters - alt solutio
     };
 
     // NOTE: attempting to compare directly like this:
-    //   try std.testing.expectEqualDeep(res.value.chapters, expect);
-    //   => error: incompatible types: '[]root.Chapter' and '[3]root.Chapter'
+    //   try std.testing.expectEqualDeep(expect, res.value.chapters);
+    //   => error: incompatible types: '[3]root.Chapter' and '[]root.Chapter'
 
-    try std.testing.expectEqualDeep(res.value.chapters, expect[0..]);
+    try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
 }
 
 test "parse chapters from example audio file containing no chapters" {
     const res = try readChapters(std.testing.allocator, "src/testdata/beep-nochap.m4a");
     defer res.deinit();
-    try std.testing.expectEqual(res.value.chapters.len, 0);
+    try std.testing.expectEqual(0, res.value.chapters.len);
 }
 
 test "fuzz example" {
