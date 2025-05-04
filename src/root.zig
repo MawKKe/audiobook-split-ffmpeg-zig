@@ -56,7 +56,8 @@ pub const OutputOpts = struct {
     no_use_title_in_meta: bool = false,
 };
 
-fn numDigits(num: usize) usize {
+/// Compute how many digits are needed to represent number in base 10
+fn numDigitsBase10(num: usize) usize {
     if (num == 0) {
         return 1;
     }
@@ -66,12 +67,12 @@ fn numDigits(num: usize) usize {
     return @as(usize, @intFromFloat(log + 1));
 }
 
-test "numDigits" {
-    try std.testing.expectEqual(1, numDigits(0));
-    try std.testing.expectEqual(1, numDigits(9));
-    try std.testing.expectEqual(2, numDigits(10));
-    try std.testing.expectEqual(2, numDigits(99));
-    try std.testing.expectEqual(3, numDigits(100));
+test "numDigitsBase10" {
+    try std.testing.expectEqual(1, numDigitsBase10(0));
+    try std.testing.expectEqual(1, numDigitsBase10(9));
+    try std.testing.expectEqual(2, numDigitsBase10(10));
+    try std.testing.expectEqual(2, numDigitsBase10(99));
+    try std.testing.expectEqual(3, numDigitsBase10(100));
 }
 
 pub fn readInputFileMetaData(
@@ -122,7 +123,7 @@ pub fn extractChapter(
 
     const name = try formatName(alloc, .{
         .num = chap.id,
-        .num_width = numDigits(chapters.len),
+        .num_width = numDigitsBase10(chapters.len),
         .stem = stem,
         .ext = meta.ext,
     });
