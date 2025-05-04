@@ -147,8 +147,13 @@ pub fn inner_main(allocator: std.mem.Allocator, argv: []const []const u8, log: a
         .no_use_title_in_meta = args.no_use_title_in_meta,
     };
 
-    for (0.., meta.chapters()) |i, ch| {
-        const retcode = try lib.extractChapter(allocator, i, &meta, &opts);
+    for (meta.chapters()) |ch| {
+        const retcode = try lib.extractChapter(
+            allocator,
+            &ch,
+            &meta,
+            &opts,
+        );
         const result = if (retcode == 0) "SUCCESS" else "FAILURE";
         try log.print("[{s}] Extract chapter id={} ({s} -> {s}) title='{s}'\n", .{
             result,

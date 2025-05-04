@@ -104,26 +104,18 @@ test "InputFileMetadata" {
 
 pub fn extractChapter(
     alloc: std.mem.Allocator,
-    chapter_num: usize,
+    chapter: *const Chapter,
     meta: *const InputFileMetaData,
     opts: *const OutputOpts,
 ) !u8 {
-    const chapters = meta.chapters();
-
-    if (chapter_num >= chapters.len) {
-        return error.OutOfBounds;
-    }
-
-    const chap = &chapters[chapter_num];
-
     const stem = if (!opts.no_use_title)
-        chap.meta_title() orelse meta.stem
+        chapter.meta_title() orelse meta.stem
     else
         meta.stem;
 
     const name = try formatName(alloc, .{
-        .num = chap.id,
-        .num_width = numDigitsBase10(chapters.len),
+        .num = chapter.id,
+        .num_width = numDigitsBase10(meta.chapters().len),
         .stem = stem,
         .ext = meta.ext,
     });
@@ -141,7 +133,7 @@ pub fn extractChapter(
     const meta_title = if (opts.no_use_title_in_meta)
         ""
     else
-        chap.meta_title() orelse "";
+        chapter.meta_title() orelse "";
 
     const meta_title_arg = try std.fmt.allocPrint(
         alloc,
@@ -165,8 +157,8 @@ pub fn extractChapter(
         "-map_chapters", "-1",
         "-vn",
         "-c", "copy",
-        "-ss", chap.start_time,
-        "-to", chap.end_time,
+        "-ss", chapter.start_time,
+        "-to", chapter.end_time,
         "-metadata", meta_title_arg,
         "-y",
         out,
@@ -227,7 +219,7 @@ test "extractChapter" {
 
         const ret = try extractChapter(
             alloc,
-            0,
+            &meta.chapters()[0],
             &meta,
             &opts,
         );
