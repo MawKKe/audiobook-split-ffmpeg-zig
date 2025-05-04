@@ -74,7 +74,10 @@ test "numDigits" {
     try std.testing.expectEqual(3, numDigits(100));
 }
 
-pub fn readInputFileMetaData(alloc: std.mem.Allocator, path: []const u8) !InputFileMetaData {
+pub fn readInputFileMetaData(
+    alloc: std.mem.Allocator,
+    path: []const u8,
+) !InputFileMetaData {
     return InputFileMetaData{
         .path = path,
         .stem = std.fs.path.stem(path),
@@ -88,7 +91,11 @@ test "InputFileMetadata" {
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const meta = try readInputFileMetaData(alloc, "src/testdata/beep.m4a");
+    const meta = try readInputFileMetaData(
+        alloc,
+        "src/testdata/beep.m4a",
+    );
+
     try std.testing.expectEqualStrings(".m4a", meta.ext);
     try std.testing.expectEqualStrings("beep", meta.stem);
     try std.testing.expectEqual(3, meta.chapters().len);
@@ -284,7 +291,11 @@ test "parseFFProbeOutput" {
             \\ }
             \\
         ;
-        const res = try parseFFProbeOutput(alloc, input_json);
+
+        const res = try parseFFProbeOutput(
+            alloc,
+            input_json,
+        );
 
         const expect = [1]Chapter{
             .{
@@ -299,7 +310,10 @@ test "parseFFProbeOutput" {
                 },
             },
         };
-        try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
+        try std.testing.expectEqualDeep(
+            expect[0..],
+            res.value.chapters,
+        );
     }
 
     {
@@ -318,7 +332,10 @@ test "parseFFProbeOutput" {
             \\     ]
             \\ }
         ;
-        const res = try parseFFProbeOutput(alloc, input_json);
+        const res = try parseFFProbeOutput(
+            alloc,
+            input_json,
+        );
 
         const expect = [1]Chapter{
             .{
@@ -331,7 +348,10 @@ test "parseFFProbeOutput" {
                 .tags = null,
             },
         };
-        try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
+        try std.testing.expectEqualDeep(
+            expect[0..],
+            res.value.chapters,
+        );
     }
     {
         const three_chapters_with_titles =
@@ -374,8 +394,16 @@ test "parseFFProbeOutput" {
             \\ }
             \\
         ;
-        const res = try parseFFProbeOutput(alloc, three_chapters_with_titles);
-        try std.testing.expectEqual(3, res.value.chapters.len);
+
+        const res = try parseFFProbeOutput(
+            alloc,
+            three_chapters_with_titles,
+        );
+
+        try std.testing.expectEqual(
+            3,
+            res.value.chapters.len,
+        );
 
         const expect = [3]Chapter{
             .{
@@ -386,7 +414,10 @@ test "parseFFProbeOutput" {
                 .end = 20000,
                 .end_time = try alloc.dupe(u8, "20.000000"),
                 .tags = Tags{
-                    .title = try alloc.dupe(u8, "It All Started With a Simple BEEP"),
+                    .title = try alloc.dupe(
+                        u8,
+                        "It All Started With a Simple BEEP",
+                    ),
                 },
             },
             .{
@@ -397,7 +428,10 @@ test "parseFFProbeOutput" {
                 .end = 40000,
                 .end_time = try alloc.dupe(u8, "40.000000"),
                 .tags = Tags{
-                    .title = try alloc.dupe(u8, "All You Can BEEP Buffee"),
+                    .title = try alloc.dupe(
+                        u8,
+                        "All You Can BEEP Buffee",
+                    ),
                 },
             },
             .{
@@ -408,16 +442,25 @@ test "parseFFProbeOutput" {
                 .end = 60000,
                 .end_time = try alloc.dupe(u8, "60.000000"),
                 .tags = Tags{
-                    .title = try alloc.dupe(u8, "The Final Beep"),
+                    .title = try alloc.dupe(
+                        u8,
+                        "The Final Beep",
+                    ),
                 },
             },
         };
 
-        try std.testing.expectEqualDeep(expect[0..], res.value.chapters);
+        try std.testing.expectEqualDeep(
+            expect[0..],
+            res.value.chapters,
+        );
     }
 }
 
-fn ffProbe(allocator: std.mem.Allocator, input_file: []const u8) ![]u8 {
+fn ffProbe(
+    allocator: std.mem.Allocator,
+    input_file: []const u8,
+) ![]u8 {
     // zig fmt: off
     const ffprobe_cmd = &.{
         "ffprobe",
@@ -446,7 +489,10 @@ fn ffProbe(allocator: std.mem.Allocator, input_file: []const u8) ![]u8 {
     return proc.stdout;
 }
 
-pub fn readChapters(allocator: std.mem.Allocator, input_file: []const u8) !std.json.Parsed(FFProbeOutput) {
+pub fn readChapters(
+    allocator: std.mem.Allocator,
+    input_file: []const u8,
+) !std.json.Parsed(FFProbeOutput) {
     const json_data = try ffProbe(allocator, input_file);
     defer allocator.free(json_data);
     return try parseFFProbeOutput(allocator, json_data);
@@ -489,7 +535,11 @@ test "formatName with variable chapter number padding" {
         "0 - nimi on .m4a",
         try formatName(
             alloc,
-            .{ .num = 0, .stem = "nimi on ", .ext = "m4a" },
+            .{
+                .num = 0,
+                .stem = "nimi on ",
+                .ext = "m4a",
+            },
         ),
     );
 
@@ -497,7 +547,12 @@ test "formatName with variable chapter number padding" {
         "001 - nimi on.m4a",
         try formatName(
             alloc,
-            .{ .num = 1, .num_width = 3, .stem = "nimi on", .ext = ".m4a" },
+            .{
+                .num = 1,
+                .num_width = 3,
+                .stem = "nimi on",
+                .ext = ".m4a",
+            },
         ),
     );
 
@@ -505,13 +560,20 @@ test "formatName with variable chapter number padding" {
         "42 - nimi on.m4a",
         try formatName(
             alloc,
-            .{ .num = 42, .stem = "nimi on", .ext = ".m4a" },
+            .{
+                .num = 42,
+                .stem = "nimi on",
+                .ext = ".m4a",
+            },
         ),
     );
 }
 
 test "parse chapters from example audio file containing 3 chapters" {
-    const res = try readChapters(std.testing.allocator, "src/testdata/beep.m4a");
+    const res = try readChapters(
+        std.testing.allocator,
+        "src/testdata/beep.m4a",
+    );
     defer res.deinit();
 
     try std.testing.expectEqual(3, res.value.chapters.len);
@@ -553,7 +615,10 @@ test "parse chapters from example audio file containing 3 chapters - alt solutio
     defer arena.deinit();
     const alloc = arena.allocator();
 
-    const res = try readChapters(alloc, "src/testdata/beep.m4a");
+    const res = try readChapters(
+        alloc,
+        "src/testdata/beep.m4a",
+    );
 
     try std.testing.expectEqual(3, res.value.chapters.len);
 
@@ -610,7 +675,10 @@ test "parse chapters from example audio file containing 3 chapters - alt solutio
 }
 
 test "parse chapters from example audio file containing no chapters" {
-    const res = try readChapters(std.testing.allocator, "src/testdata/beep-nochap.m4a");
+    const res = try readChapters(
+        std.testing.allocator,
+        "src/testdata/beep-nochap.m4a",
+    );
     defer res.deinit();
     try std.testing.expectEqual(0, res.value.chapters.len);
 }

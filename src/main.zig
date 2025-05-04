@@ -111,7 +111,10 @@ pub fn inner_main(allocator: std.mem.Allocator, argv: []const []const u8, log: a
             error.ShowedHelp => return 0, // don't treat as a failure
             error.NoArgs => return 1,
             else => {
-                try log.print("ERROR: failed to parse arguments, reason: {}\n", .{err});
+                try log.print(
+                    "ERROR: failed to parse arguments, reason: {}\n",
+                    .{err},
+                );
                 return 2;
             },
         };
@@ -123,6 +126,7 @@ pub fn inner_main(allocator: std.mem.Allocator, argv: []const []const u8, log: a
             args.outdir,
         },
     );
+
     const meta = try lib.readInputFileMetaData(
         allocator,
         args.infile,
