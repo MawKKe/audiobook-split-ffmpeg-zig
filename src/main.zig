@@ -14,7 +14,7 @@ const Args = struct {
     no_use_title_in_meta: bool = false,
 };
 
-fn printHelp(program_name: []const u8, log: anytype) !void {
+fn printHelp(program_name: []const u8, log: *std.Io.Writer) !void {
     try log.print(
         \\Usage:
         \\  {0s} --input-file <path> --output-dir <path>
@@ -35,7 +35,7 @@ fn printHelp(program_name: []const u8, log: anytype) !void {
     , .{program_name});
 }
 
-fn parseArgs(argv: []const []const u8, log: anytype) !Args {
+fn parseArgs(argv: []const []const u8, log: *std.Io.Writer) !Args {
     var infile: ?[]const u8 = null;
     var outdir: ?[]const u8 = null;
     var no_use_title = false;
@@ -98,14 +98,16 @@ pub fn main() anyerror!void {
 
     defer std.process.argsFree(allocator, argv);
 
-    const stderr = std.io.getStdErr().writer();
+    //const stderr = std.io.getStdErr().writer();
 
-    const code = try inner_main(allocator, argv, stderr);
+    var stderr = std.fs.File.stderr().writer(&.{});
+
+    const code = try inner_main(allocator, argv, &stderr.interface);
 
     return std.process.exit(code);
 }
 
-pub fn inner_main(allocator: std.mem.Allocator, argv: []const []const u8, log: anytype) anyerror!u8 {
+pub fn inner_main(allocator: std.mem.Allocator, argv: []const []const u8, log: *std.Io.Writer) anyerror!u8 {
     const args = parseArgs(argv, log) catch |err|
         switch (err) {
             error.ShowedHelp => return 0, // don't treat as a failure
@@ -195,12 +197,12 @@ test "run main" {
             continue;
         }
 
-        var buf = std.ArrayList(u8).init(alloc);
-        defer buf.deinit();
+        var out = std.Io.Writer.Allocating.init(alloc);
 
-        const out = buf.writer();
+        const code = try inner_main(alloc, case.argv, &out.writer);
 
-        const code = try inner_main(alloc, case.argv, out);
+        const res = out.toArrayList();
+        try std.testing.expect(res.items.len > 0);
 
         try std.testing.expectEqual(case.expect_code, code);
     }
